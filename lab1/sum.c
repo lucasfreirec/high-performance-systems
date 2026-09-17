@@ -3,7 +3,7 @@
 #include <omp.h>
 #include <sys/time.h>
 
-/* macro de mesure de temps, retourne une valeur en µsecondes */
+/* macro de mesure de temps, retourne une valeur en ï¿½secondes */
 #define TIME_DIFF(t1, t2) \
         ((t2.tv_sec - t1.tv_sec) * 1000000 + (t2.tv_usec - t1.tv_usec))
 
@@ -25,7 +25,7 @@ int main (int argc, char *argv[])
   sum = 0;
   gettimeofday(&t1,NULL);
 
-  // version séquentielle
+  // version sï¿½quentielle
   for (int i=0; i<N;i++)
     sum += tab[i];
 
@@ -34,12 +34,14 @@ int main (int argc, char *argv[])
   temps = TIME_DIFF(t1,t2);
   printf("seq\t\t: %ld.%03ldms   sum = %u\n", temps/1000, temps%1000, sum);
 
-  ///////////// première technique : critical
+  ///////////// premiï¿½re technique : critical
   sum = 0;
   gettimeofday(&t1,NULL);
 
   // TODO
+  #pragma omp parallel for
   for (int i=0; i<N;i++)
+    #pragma omp critical
     sum += tab[i];
 
   gettimeofday(&t2,NULL);
@@ -48,12 +50,14 @@ int main (int argc, char *argv[])
   printf("critical\t: %ld.%03ldms   sum = %u\n", temps/1000, temps%1000, sum);
 
 
-  ///////////// deuxième technique : atomic
+  ///////////// deuxiï¿½me technique : atomic
   sum = 0;
   gettimeofday(&t1,NULL);
 
   // TODO
+  #pragma omp parallel for
   for (int i=0; i<N;i++)
+    #pragma omp atomic
     sum += tab[i];
 
   gettimeofday(&t2,NULL);
@@ -62,24 +66,34 @@ int main (int argc, char *argv[])
   printf("atomic\t\t: %ld.%03ldms   sum = %u\n", temps/1000, temps%1000, sum);
 
 
-  ///////////// troisième technique : sommes partielles
+  ///////////// troisiï¿½me technique : sommes partielles
   sum = 0;
   gettimeofday(&t1,NULL);
 
    // TODO
-  for (int i=0; i<N;i++)
-    sum += tab[i];
+   #pragma omp parallel
+   {
+     int my_sum = 0;
+     #pragma omp for
+     for (int i=0; i<N;i++)
+     my_sum += tab[i];
+     
+     #pragma omp atomic
+     sum += my_sum;
+   }
+
 
   gettimeofday(&t2,NULL);
 
   temps = TIME_DIFF(t1,t2);
 printf("local\t\t: %ld.%03ldms   sum = %u\n", temps/1000, temps%1000, sum);
 
-  ///////////// quatrième technique : reduction OpenMP
+  ///////////// quatriï¿½me technique : reduction OpenMP
   sum = 0;
   gettimeofday(&t1,NULL);
 
   // TODO
+  #pragma omp parallel for reduction (+:sum)
   for (int i=0; i<N;i++)
     sum += tab[i];
 
